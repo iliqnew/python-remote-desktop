@@ -1,7 +1,6 @@
 import pickle
 import socket
 from threading import Thread
-
 import pyautogui
 
 
@@ -10,7 +9,7 @@ class Master:
         self.profiles = [{"username": "root", "password": "root"}]
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(("localhost", 5000))
-        self.buffer = 1024
+        self.buffer = 409600
         self.connection = None
 
     def listen(self):
@@ -18,7 +17,7 @@ class Master:
             self.socket.listen(1)
             print("Listening...")
             conn, address = self.socket.accept()
-            print(f"Connection from {address}!")
+            print(f"Connection from {address}")
             self.connection = True
             self.handle_connection(conn, address)
             print(f"Lost connection with {address}")
@@ -41,8 +40,12 @@ class Master:
         self.connection = False
 
     def send(self, conn, address):
-        screenshot = pyautogui.screenshot()
-        conn.send(pickle.dumps(screenshot))
+        image = pyautogui.screenshot()
+        image_bytes = image.tobytes()
+        for i in range(0, len(image_bytes), self.buffer):
+            chunk = image_bytes[i : i + self.buffer]
+            conn.send(chunk)
+        conn.send(f"&&&^^^&&&({image.mode.__repr__()}, {image.size})".encode())
 
     def process_data(self, data):
         print(data)
